@@ -63,6 +63,47 @@ A static page ([`tts_eu_pt/web/`](tts_eu_pt/web/)) plus a ~50-line FastAPI backe
 directly. To run it against local weights, set `TTS_EU_PT_MODEL` and
 `TTS_EU_PT_VOICEPACK`; `PORT` overrides the default 8000.
 
+## Docker / Portainer
+
+The image is CPU-only, runs as a non-root user and starts `python -m tts_eu_pt.server`
+(binds `0.0.0.0`, port from `PORT`, 18500 in the image).
+
+```bash
+docker build -t kokoro-pt:latest .                                   # build
+docker run -d --name kokoro-pt -p 18500:18500 \
+  -v kokoro_hf_cache:/data/huggingface --restart unless-stopped kokoro-pt:latest   # run
+docker ps --filter name=kokoro-pt                                    # STATUS shows (healthy)
+git pull && docker build -t kokoro-pt:latest . \
+  && docker rm -f kokoro-pt && docker run -d --name kokoro-pt -p 18500:18500 \
+  -v kokoro_hf_cache:/data/huggingface --restart unless-stopped kokoro-pt:latest   # update
+```
+
+Compose / Portainer stack: paste [`docker-compose.yml`](docker-compose.yml) into
+*Stacks > Add stack* (Repository or Web editor), or run `docker compose up -d --build`;
+update with `git pull && docker compose up -d --build`.
+
+**Cache persistence.** `huggingface_hub` stores downloads under `$HF_HOME/hub`
+(default `~/.cache/huggingface`). The image sets `HF_HOME=/data/huggingface` and the
+compose file mounts the named volume `hf_cache` there, so weights are downloaded once on
+first synthesis and survive restarts and image updates. The model loads lazily on the
+first request.
+
+**Verify the API:**
+
+```bash
+curl -s http://localhost:18500/v1/models
+curl -s -X POST http://localhost:18500/tts -H 'Content-Type: application/json' \
+  -d '{"text":"Olá, são dezasseis horas."}' -o out.wav && file out.wav
+curl -s -X POST http://localhost:18500/v1/audio/speech -H 'Content-Type: application/json' \
+  -d '{"model":"tts-eu-pt","input":"Olá!","voice":"pt-PT","response_format":"pcm"}' -o out.pcm
+```
+
+PCM is signed 16-bit little-endian, mono, 24 kHz.
+
+**GHCR.** The image is ready to be published to `ghcr.io/joralm/tts_eu_pt_openai`
+(`docker tag kokoro-pt:latest ghcr.io/joralm/tts_eu_pt_openai:latest` then
+`docker push ...` after `docker login ghcr.io`). Nothing is published automatically.
+
 ## HTTP API (FastAPI server)
 
 Run: `pip install -e ".[server]" && python -m tts_eu_pt.server` (port `PORT`, default 8000).

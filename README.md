@@ -177,3 +177,15 @@ Apache-2.0.
 ## Status
 
 Early release: the runtime + SDK + examples.
+
+## Docker image (GHCR)
+
+A GitHub Actions workflow (`.github/workflows/docker-image.yml`) builds the root `Dockerfile`
+and pushes it on every push to `main` (or manually via *Run workflow*).
+
+- **Published to:** `ghcr.io/<owner>/<repo>` (lower-cased automatically), e.g. `ghcr.io/joralm/tts_eu_pt_openai`.
+- **Tags:** `main` (branch), `sha-<short commit>`, and `latest` (default branch).
+- **Settings:** the workflow uses `GITHUB_TOKEN` with `packages: write`; ensure
+  *Settings → Actions → General → Workflow permissions* allows it. New packages are private by
+  default: change visibility under the package's *Package settings* to pull without login, or
+  `docker login ghcr.io` with a token that has `read:packages`.

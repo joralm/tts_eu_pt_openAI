@@ -1,0 +1,24 @@
+services:
+  kokoro-pt:
+    build: .
+    # After publishing to GHCR, replace `build: .` with:
+    # image: ghcr.io/joralm/tts_eu_pt_openai:latest
+    image: kokoro-pt:latest
+    container_name: kokoro-pt
+    restart: unless-stopped
+    ports:
+      - "18500:18500"
+    environment:
+      PORT: "18500"
+      HF_HOME: /data/huggingface
+    volumes:
+      - hf_cache:/data/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:18500/v1/models', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  hf_cache:

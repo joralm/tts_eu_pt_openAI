@@ -66,15 +66,15 @@ directly. To run it against local weights, set `TTS_EU_PT_MODEL` and
 ## Docker / Portainer
 
 The image is CPU-only, runs as a non-root user and starts `python -m tts_eu_pt.server`
-(binds `0.0.0.0`, port from `PORT`, 18500 in the image).
+(binds `0.0.0.0`, port from `PORT`, 8000 in the image).
 
 ```bash
 docker build -t kokoro-pt:latest .                                   # build
-docker run -d --name kokoro-pt -p 18500:18500 \
+docker run -d --name kokoro-pt -p 8000:8000 \
   -v kokoro_hf_cache:/data/huggingface --restart unless-stopped kokoro-pt:latest   # run
 docker ps --filter name=kokoro-pt                                    # STATUS shows (healthy)
 git pull && docker build -t kokoro-pt:latest . \
-  && docker rm -f kokoro-pt && docker run -d --name kokoro-pt -p 18500:18500 \
+  && docker rm -f kokoro-pt && docker run -d --name kokoro-pt -p 8000:8000 \
   -v kokoro_hf_cache:/data/huggingface --restart unless-stopped kokoro-pt:latest   # update
 ```
 
@@ -91,10 +91,10 @@ first request.
 **Verify the API:**
 
 ```bash
-curl -s http://localhost:18500/v1/models
-curl -s -X POST http://localhost:18500/tts -H 'Content-Type: application/json' \
+curl -s http://localhost:8000/v1/models
+curl -s -X POST http://localhost:8000/tts -H 'Content-Type: application/json' \
   -d '{"text":"Olá, são dezasseis horas."}' -o out.wav && file out.wav
-curl -s -X POST http://localhost:18500/v1/audio/speech -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:8000/v1/audio/speech -H 'Content-Type: application/json' \
   -d '{"model":"tts-eu-pt","input":"Olá!","voice":"pt-PT","response_format":"pcm"}' -o out.pcm
 ```
 

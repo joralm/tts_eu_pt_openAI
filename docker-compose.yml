@@ -7,14 +7,14 @@ services:
     container_name: kokoro-pt
     restart: unless-stopped
     ports:
-      - "18500:18500"
+      - "8000:8000"
     environment:
-      PORT: "18500"
+      PORT: "8000"
       HF_HOME: /data/huggingface
     volumes:
       - hf_cache:/data/huggingface
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:18500/v1/models', timeout=4)"]
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/v1/models', timeout=4)"]
       interval: 30s
       timeout: 5s
       retries: 3

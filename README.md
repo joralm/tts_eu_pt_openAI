@@ -63,6 +63,63 @@ A static page ([`tts_eu_pt/web/`](tts_eu_pt/web/)) plus a ~50-line FastAPI backe
 directly. To run it against local weights, set `TTS_EU_PT_MODEL` and
 `TTS_EU_PT_VOICEPACK`; `PORT` overrides the default 8000.
 
+## HTTP API (FastAPI server)
+
+Run: `pip install -e ".[server]" && python -m tts_eu_pt.server` (port `PORT`, default 8000).
+Point `TTS_EU_PT_MODEL` / `TTS_EU_PT_VOICEPACK` at local weights if needed. One model instance is
+loaded once and shared by all endpoints; inference is serialised with a lock.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /tts` | Legacy (FreePBX). Body `{"text": "..."}` -> `audio/wav`, mono, 16-bit PCM, 24 kHz. Unchanged. |
+| `POST /v1/audio/speech` | OpenAI-compatible speech. Returns raw audio bytes. |
+| `GET /v1/models` | OpenAI-style model list (local model only). |
+| `GET /` | Web echo page. |
+
+**FreePBX compatibility:** `/tts` URL, payload, WAV response, pt-PT normalisation, model/voice
+configuration and startup/port are unchanged. No authentication is required on any endpoint.
+
+### `POST /v1/audio/speech`
+
+| Field | Notes |
+|---|---|
+| `input` | Required, non-empty string, max 4096 chars. |
+| `model` | Optional; must equal the model id (default `tts-eu-pt`, override with `TTS_EU_PT_MODEL_ID`), else 404. |
+| `voice` | Optional; the only real voice is `pt-PT` (aliases `tts_eu_pt`, `tts-eu-pt`). Others -> 400. |
+| `response_format` | `wav` (default, `audio/wav`) or `pcm` (`audio/pcm`: raw signed 16-bit little-endian, mono, 24 kHz, no header). `mp3`, `flac`, `opus`, `aac` -> 400. |
+| `speed` | 0.25-4.0, passed to the engine (>1 is faster). |
+| `stream_format` | Only `audio` accepted. |
+| other fields (e.g. `instructions`) | Ignored; the engine has no support for them. |
+
+Errors use the OpenAI shape `{"error": {"message", "type", "param", "code"}}` (400 validation,
+404 unknown model, 422 no audio, 500 synthesis failure; no tracebacks are exposed).
+
+```bash
+curl -s http://localhost:8000/v1/audio/speech -H 'Content-Type: application/json' \
+  -d '{"model":"tts-eu-pt","input":"Bom dia, são dezasseis horas.","voice":"pt-PT","response_format":"wav"}' \
+  -o out.wav
+curl -s http://localhost:8000/v1/audio/speech -H 'Content-Type: application/json' \
+  -d '{"model":"tts-eu-pt","input":"Olá","voice":"pt-PT","response_format":"pcm"}' -o out.pcm
+curl -s http://localhost:8000/tts -H 'Content-Type: application/json' -d '{"text":"Olá"}' -o legacy.wav
+```
+
+### Dograh
+
+Configure the OpenAI TTS provider with Base URL `http://<host>:<port>/v1`, model `tts-eu-pt`,
+voice `pt-PT`, any placeholder API key (it is not checked). Based on Pipecat's
+`OpenAITTSService` (which Dograh builds on): it calls `POST {base_url}/audio/speech` with
+`response_format="pcm"` and expects 24 kHz mono s16le, which matches this server; it does not call
+`/v1/models` (the endpoint is provided only for clients that probe it). This was *not* verified
+against a running Dograh instance here; the contract is covered by a test using that request shape.
+
+### Known limitations
+
+- No true streaming: audio is synthesised fully, then returned in one HTTP response (higher
+  first-byte latency for long text; client cancellation does not interrupt a running synthesis).
+- Requests are processed one at a time on the shared model; concurrent requests queue, so
+  client timeouts should allow for that.
+- Only `wav` and `pcm`; one voice; `instructions` is ignored.
+
 ## How it works
 
 - **Weights** encode the *language* (pt-PT phonology/accent); a small **voicepack** encodes

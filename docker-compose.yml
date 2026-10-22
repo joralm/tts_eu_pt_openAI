@@ -9,7 +9,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      PORT: "8000"
       HF_HOME: /data/huggingface
     volumes:
       - hf_cache:/data/huggingface

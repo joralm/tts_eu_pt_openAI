@@ -61,12 +61,12 @@ python -m tts_eu_pt.server            # open http://localhost:8000
 A static page ([`tts_eu_pt/web/`](tts_eu_pt/web/)) plus a ~50-line FastAPI backend
 ([`tts_eu_pt/server.py`](tts_eu_pt/server.py)) — browsers can't run the torch model
 directly. To run it against local weights, set `TTS_EU_PT_MODEL` and
-`TTS_EU_PT_VOICEPACK`; `PORT` overrides the default 8000.
+`TTS_EU_PT_VOICEPACK`.
 
 ## Docker / Portainer
 
 The image is CPU-only, runs as a non-root user and starts `python -m tts_eu_pt.server`
-(binds `0.0.0.0`, port from `PORT`, 8000 in the image).
+(binds `0.0.0.0`, port 8000).
 
 ```bash
 docker build -t kokoro-pt:latest .                                   # build
@@ -106,7 +106,7 @@ PCM is signed 16-bit little-endian, mono, 24 kHz.
 
 ## HTTP API (FastAPI server)
 
-Run: `pip install -e ".[server]" && python -m tts_eu_pt.server` (port `PORT`, default 8000).
+Run: `pip install -e ".[server]" && python -m tts_eu_pt.server` (port 8000).
 Point `TTS_EU_PT_MODEL` / `TTS_EU_PT_VOICEPACK` at local weights if needed. One model instance is
 loaded once and shared by all endpoints; inference is serialised with a lock.
 
